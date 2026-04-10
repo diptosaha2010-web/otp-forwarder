@@ -57,13 +57,6 @@
             font-weight: bold;
             transition: all 0.3s;
         }
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        .btn-danger:hover {
-            background: #c82333;
-        }
         .btn-warning {
             background: #ffc107;
             color: #212529;
@@ -115,6 +108,11 @@
             font-weight: bold;
             color: #28a745;
         }
+        .mobile-number {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 500;
+        }
         .footer {
             padding: 15px;
             text-align: center;
@@ -132,7 +130,6 @@
         
         <div class="controls">
             <input type="text" id="searchInput" class="search-box" placeholder="Search mobile number..." onkeyup="filterTable()">
-            <button class="btn-danger" onclick="clearAllRecords()">🗑️ Clear All Records</button>
             <button class="btn-primary" onclick="searchNumber()">🔍 Search</button>
             <button class="btn-warning" onclick="deleteSelected()">❌ Delete Selected</button>
         </div>
@@ -200,7 +197,7 @@
                     <tr>
                         <td><input type="checkbox" class="rowCheckbox" data-id="${item.id}"></td>
                         <td>${index + 1}</td>
-                        <td>${item.mobile_number || 'Unknown'}</td>
+                        <td class="mobile-number">${item.mobile_number || 'Unknown'}</td>
                         <td class="otp-code">${item.otp_code || 'N/A'}</td>
                         <td>${item.arrival_time || 'N/A'}</td>
                         <td><button class="delete-btn" onclick="deleteOTP(${item.id})">Delete</button></td>
@@ -221,13 +218,6 @@
         function deleteOTP(id) {
             if (confirm('Are you sure you want to delete this record?')) {
                 fetch(`/api/delete/${id}`, { method: 'DELETE' })
-                    .then(() => loadOTPs());
-            }
-        }
-        
-        function clearAllRecords() {
-            if (confirm('⚠️ Delete ALL records? This cannot be undone!')) {
-                fetch('/api/delete_all', { method: 'DELETE' })
                     .then(() => loadOTPs());
             }
         }
@@ -255,6 +245,7 @@
             checkboxes.forEach(cb => cb.checked = selectAll.checked);
         }
         
+        // প্রতি 5 সেকেন্ডে রিফ্রেশ
         setInterval(loadOTPs, 5000);
         loadOTPs();
     </script>
