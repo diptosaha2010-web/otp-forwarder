@@ -15,14 +15,13 @@ db = SQLAlchemy(app)
 BD_TZ = timezone(timedelta(hours=6))
 
 def get_bd_time():
-    """বর্তমান বাংলাদেশ সময় রিটার্ন করে"""
     return datetime.now(BD_TZ).strftime("%Y-%m-%d %I:%M:%S %p")
 
 # Database Model
 class OTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.String(50), nullable=True)      # প্রেরক (যে নম্বর থেকে এসএমএস এসেছে)
-    target = db.Column(db.String(50), nullable=True)      # প্রাপক (যে নম্বরের জন্য OTP)
+    target = db.Column(db.String(50), nullable=True)      # প্রাপক (যে নম্বরে এসএমএস গিয়েছে)
     otp_code = db.Column(db.String(20), nullable=True)
     arrival_time = db.Column(db.String(50), nullable=True)
     raw_message = db.Column(db.Text, nullable=True)
@@ -45,6 +44,7 @@ def convert_word_otp_to_number(text):
         'FIVE': '5', 'SIX': '6', 'SEVEN': '7', 'EIGHT': '8', 'NINE': '9'
     }
     
+    # প্যাটার্ন: Four-Eight-Seven-Eight-Zero-Zero বা Seven-Five-One-Six-Seven-Four
     pattern = r'(?:[A-Za-z]+-?){4,}'
     matches = re.findall(pattern, text)
     
@@ -59,48 +59,37 @@ def convert_word_otp_to_number(text):
             return number
     return None
 
-def extract_mobile_number(text):
-    """SMS থেকে মোবাইল নম্বর বের করা"""
-    # 8801XXXXXXXXX ফরম্যাট
-    match = re.search(r'8801[0-9]{9}', text)
-    if match:
-        return match.group()
-    # 01XXXXXXXXX ফরম্যাট
-    match = re.search(r'01[0-9]{9}', text)
-    if match:
-        return match.group()
-    return None
-
 @app.route('/api/receive', methods=['POST'])
 def receive_otp():
-    # ডাটা নেওয়া
+    # JSON ডাটা পার্স করা
     if request.is_json:
         data = request.json
-        sender = data.get('mobile_number') or data.get('from') or data.get('sender')
+        sender = data.get('sender') or data.get('mobile_number') or data.get('from')
+        target = data.get('target') or data.get('to')
         message = data.get('otp_code') or data.get('content') or data.get('message')
     else:
-        sender = request.form.get('mobile_number') or request.form.get('from') or request.form.get('sender')
+        sender = request.form.get('sender') or request.form.get('mobile_number') or request.form.get('from')
+        target = request.form.get('target') or request.form.get('to')
         message = request.form.get('otp_code') or request.form.get('content') or request.form.get('message')
     
-    # OTP রূপান্তর
+    # OTP রূপান্তর (শব্দ থেকে সংখ্যায়)
     otp_number = convert_word_otp_to_number(message) if message else None
     
-    # প্রেরক (Sender) নির্ধারণ
-    # যদি sender এ নম্বর থাকে তাহলে সেটা দেখাবে, নাহলে যেটা আছে সেটাই দেখাবে
+    # যদি OTP না পাওয়া যায়, তাহলে পুরো মেসেজের সংখ্যা খোঁজা
+    if not otp_number and message:
+        numeric_otp = re.search(r'\b\d{4,6}\b', message)
+        if numeric_otp:
+            otp_number = numeric_otp.group()
+    
+    # ডিফল্ট মান নির্ধারণ
     final_sender = sender if sender else 'Unknown'
-    
-    # প্রাপক (Target) নির্ধারণ - মেসেজের ভেতর থেকে নম্বর বের করা
-    target_number = extract_mobile_number(message)
-    if not target_number:
-        target_number = 'Unknown'
-    
-    # বাংলাদেশ সময়
+    final_target = target if target else 'Unknown'
     bd_time = datetime.now(BD_TZ).strftime("%Y-%m-%d %I:%M:%S %p")
     
     # ডাটাবেসে সেভ করা
     new_otp = OTP(
         sender=final_sender,
-        target=target_number,
+        target=final_target,
         otp_code=otp_number or 'Not found',
         arrival_time=bd_time,
         raw_message=message
@@ -108,8 +97,9 @@ def receive_otp():
     db.session.add(new_otp)
     db.session.commit()
     
+    # লগে দেখানো
     print(f"📤 Sender: {final_sender}")
-    print(f"📥 Target: {target_number}")
+    print(f"📥 Target: {final_target}")
     print(f"🔢 OTP: {otp_number}")
     print(f"⏰ Time: {bd_time}")
     print("---")
@@ -117,7 +107,7 @@ def receive_otp():
     return jsonify({
         "status": "success", 
         "sender": final_sender,
-        "target": target_number,
+        "target": final_target,
         "otp": otp_number,
         "time": bd_time
     }), 200
