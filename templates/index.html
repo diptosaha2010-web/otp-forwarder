@@ -1,69 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Monitoring Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>IVAC OTP Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f4f7f6; }
-        .header-panel { background: #5c6bc0; color: white; padding: 25px; border-radius: 0 0 15px 15px; text-align: center; }
-        .table-container { background: white; padding: 15px; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        :root { --primary: #1a73e8; --danger: #d93025; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .header h2 { color: var(--primary); margin: 0; }
+
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-box { display: flex; flex: 1; gap: 5px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
+        
+        button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 15px; font-weight: 600; transition: 0.3s; }
+        .btn-search { background: var(--primary); color: white; }
+        .btn-delete-all { background: var(--danger); color: white; }
+        .btn-delete-selected { background: #5f6368; color: white; cursor: not-allowed; opacity: 0.6; }
+        .btn-delete-selected.active { background: var(--danger); cursor: pointer; opacity: 1; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f1f3f4; color: #5f6368; }
+        tr:hover { background: #f8f9fa; }
+
+        .otp-badge { background: #e8f0fe; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 1.1em; }
+        .delete-icon { color: #ccc; cursor: not-allowed; transition: 0.3s; }
+        .delete-icon.active { color: var(--danger); cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="header-panel shadow">
-    <h4>📱 OTP মনিটরিং ড্যাশবোর্ড</h4>
-    <p style="font-size: 0.8rem;">সক্রিয় প্রোফাইল: ৩০টি (IVACBD)</p>
-</div>
-
-<div class="container mt-3">
-    <input type="text" id="searchInput" class="form-control mb-3" placeholder="মোবাইল নম্বর সার্চ...">
-    
-    <div class="table-container">
-        <table class="table table-sm table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>নম্বর</th>
-                    <th>OTP</th>
-                    <th>অ্যাকশন</th>
-                </tr>
-            </thead>
-            <tbody id="otpBody">
-                <tr><td colspan="3" class="text-center">লোডিং...</td></tr>
-            </tbody>
-        </table>
+<div class="container">
+    <div class="header">
+        <h2><i class="fa-solid fa-shield-halved"></i> OTP Monitoring Panel</h2>
+        <button class="btn-delete-all" onclick="deleteAll()"><i class="fa-solid fa-trash-can"></i> All Delete</button>
     </div>
+
+    <div class="controls">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search by number...">
+            <button class="btn-search" onclick="searchTable()"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+        </div>
+        <button id="deleteSelectedBtn" class="btn-delete-selected" onclick="deleteSelected()" disabled>Delete Selected</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                <th>SL</th>
+                <th>Mobile Number</th>
+                <th>OTP</th>
+                <th>Time</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="otpTableBody">
+            </tbody>
+    </table>
 </div>
 
 <script>
-    function loadData() {
-        fetch('/api/get_otps')
-        .then(res => res.json())
-        .then(data => {
-            let html = "";
-            let search = document.getElementById('searchInput').value;
-            data.forEach(item => {
-                if(search && !item.target.includes(search)) return;
-                html += `<tr>
+    let selectedIds = new Set();
+
+    async function fetchOTPs() {
+        const response = await fetch('/api/get_otps');
+        const data = await response.json();
+        const tbody = document.getElementById('otpTableBody');
+        tbody.innerHTML = '';
+
+        data.forEach((item, index) => {
+            const isChecked = selectedIds.has(item.id);
+            const row = `
+                <tr>
+                    <td><input type="checkbox" class="row-checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="handleRowCheck(this, ${item.id})"></td>
+                    <td>${index + 1}</td>
                     <td>${item.target}</td>
-                    <td class="fw-bold text-primary">${item.message}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="del(${item.id})">🗑️</button></td>
-                </tr>`;
-            });
-            document.getElementById('otpBody').innerHTML = html;
+                    <td><span class="otp-badge">${item.message}</span></td>
+                    <td>${item.timestamp}</td>
+                    <td><i class="fa-solid fa-trash delete-icon ${isChecked ? 'active' : ''}" onclick="${isChecked ? `deleteSingle(${item.id})` : ''}"></i></td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
         });
     }
 
-    function del(id) {
-        if(confirm('মুছে ফেলবেন?')) {
-            fetch('/api/delete/' + id, {method: 'POST'}).then(() => loadData());
+    function handleRowCheck(checkbox, id) {
+        if (checkbox.checked) {
+            selectedIds.add(id);
+        } else {
+            selectedIds.delete(id);
+        }
+        updateControlButtons();
+        fetchOTPs(); // Refresh to update delete icons
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+            if(selectAll.checked) selectedIds.add(parseInt(cb.value));
+            else selectedIds.clear();
+        });
+        updateControlButtons();
+        fetchOTPs();
+    }
+
+    function updateControlButtons() {
+        const btn = document.getElementById('deleteSelectedBtn');
+        if (selectedIds.size > 0) {
+            btn.classList.add('active');
+            btn.disabled = false;
+        } else {
+            btn.classList.remove('active');
+            btn.disabled = true;
         }
     }
 
-    setInterval(loadData, 5000);
-    window.onload = loadData;
+    async function deleteSingle(id) {
+        if(confirm('Are you sure?')) {
+            await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+            selectedIds.delete(id);
+            fetchOTPs();
+        }
+    }
+
+    async function deleteSelected() {
+        if(confirm(`Delete ${selectedIds.size} selected items?`)) {
+            for (let id of selectedIds) {
+                await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+            }
+            selectedIds.clear();
+            updateControlButtons();
+            fetchOTPs();
+        }
+    }
+
+    async function deleteAll() {
+        if(confirm('Delete all OTP records? This cannot be undone.')) {
+            await fetch('/api/delete_all', { method: 'DELETE' });
+            selectedIds.clear();
+            updateControlButtons();
+            fetchOTPs();
+        }
+    }
+
+    function searchTable() {
+        let input = document.getElementById("searchInput").value.toUpperCase();
+        let tr = document.getElementById("otpTableBody").getElementsByTagName("tr");
+        for (let i = 0; i < tr.length; i++) {
+            let td = tr[i].getElementsByTagName("td")[2]; // Mobile Number column
+            if (td) {
+                let txtValue = td.textContent || td.innerText;
+                tr[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+            }
+        }
+    }
+
+    setInterval(fetchOTPs, 3000);
+    fetchOTPs();
 </script>
+
 </body>
 </html>
