@@ -21,7 +21,8 @@ def get_bd_time():
 # Database Model
 class OTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    mobile_number = db.Column(db.String(50), nullable=True)
+    sender = db.Column(db.String(50), nullable=True)      # প্রেরক (যে নম্বর থেকে এসএমএস এসেছে)
+    target = db.Column(db.String(50), nullable=True)      # প্রাপক (যে নম্বরের জন্য OTP)
     otp_code = db.Column(db.String(20), nullable=True)
     arrival_time = db.Column(db.String(50), nullable=True)
     raw_message = db.Column(db.Text, nullable=True)
@@ -84,27 +85,22 @@ def receive_otp():
     # OTP রূপান্তর
     otp_number = convert_word_otp_to_number(message) if message else None
     
-    # সঠিক মোবাইল নম্বর বের করা
-    mobile = None
+    # প্রেরক (Sender) নির্ধারণ
+    # যদি sender এ নম্বর থাকে তাহলে সেটা দেখাবে, নাহলে যেটা আছে সেটাই দেখাবে
+    final_sender = sender if sender else 'Unknown'
     
-    # 1. প্রথমে sender থেকে নেওয়ার চেষ্টা (যেটা IVAC_BD দিয়ে আসে)
-    if sender and sender != 'IVAC_BD' and 'IVAC' not in sender:
-        mobile = sender
-    
-    # 2. যদি sender এ সঠিক নম্বর না থাকে, তাহলে মেসেজের ভেতর খোঁজা
-    if not mobile or mobile == 'IVAC_BD':
-        mobile = extract_mobile_number(message)
-    
-    # 3. যদি কিছুই না পাওয়া যায়
-    if not mobile:
-        mobile = 'Unknown'
+    # প্রাপক (Target) নির্ধারণ - মেসেজের ভেতর থেকে নম্বর বের করা
+    target_number = extract_mobile_number(message)
+    if not target_number:
+        target_number = 'Unknown'
     
     # বাংলাদেশ সময়
     bd_time = datetime.now(BD_TZ).strftime("%Y-%m-%d %I:%M:%S %p")
     
     # ডাটাবেসে সেভ করা
     new_otp = OTP(
-        mobile_number=mobile,
+        sender=final_sender,
+        target=target_number,
         otp_code=otp_number or 'Not found',
         arrival_time=bd_time,
         raw_message=message
@@ -112,14 +108,16 @@ def receive_otp():
     db.session.add(new_otp)
     db.session.commit()
     
-    print(f"📱 Mobile: {mobile}")
+    print(f"📤 Sender: {final_sender}")
+    print(f"📥 Target: {target_number}")
     print(f"🔢 OTP: {otp_number}")
     print(f"⏰ Time: {bd_time}")
     print("---")
     
     return jsonify({
         "status": "success", 
-        "mobile": mobile,
+        "sender": final_sender,
+        "target": target_number,
         "otp": otp_number,
         "time": bd_time
     }), 200
@@ -131,7 +129,8 @@ def get_otps():
     for otp in otps:
         output.append({
             "id": otp.id,
-            "mobile_number": otp.mobile_number,
+            "sender": otp.sender,
+            "target": otp.target,
             "otp_code": otp.otp_code,
             "arrival_time": otp.arrival_time
         })
