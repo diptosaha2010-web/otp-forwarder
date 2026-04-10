@@ -93,6 +93,9 @@
             color: white;
             padding: 5px 10px;
             font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
         .delete-btn:hover {
             background: #c82333;
@@ -113,19 +116,16 @@
             font-size: 13px;
             font-weight: 500;
         }
-        .sender-badge {
-            background: #e9ecef;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-        }
         .footer {
             padding: 15px;
             text-align: center;
             background: #f8f9fa;
             color: #6c757d;
             font-size: 12px;
+        }
+        @media (max-width: 768px) {
+            th, td { padding: 8px 10px; font-size: 12px; }
+            .otp-code { font-size: 14px; }
         }
     </style>
 </head>
@@ -202,23 +202,34 @@
             
             let html = '';
             filteredData.forEach((item, index) => {
-                // সেন্ডার দেখানো: যদি নম্বর হয় তাহলে নম্বর দেখাবে, নাহলে যেটা আছে সেটাই
                 let senderDisplay = item.sender || 'Unknown';
                 let targetDisplay = item.target || 'Unknown';
+                let otpDisplay = item.otp_code || 'N/A';
+                let timeDisplay = item.arrival_time || 'N/A';
                 
                 html += `
                     <tr>
                         <td><input type="checkbox" class="rowCheckbox" data-id="${item.id}"></td>
                         <td>${index + 1}</td>
-                        <td class="mono-text">${senderDisplay}</td>
-                        <td class="mono-text">${targetDisplay}</td>
-                        <td class="otp-code">${item.otp_code || 'N/A'}</td>
-                        <td>${item.arrival_time || 'N/A'}</td>
+                        <td class="mono-text">${escapeHtml(senderDisplay)}</td>
+                        <td class="mono-text">${escapeHtml(targetDisplay)}</td>
+                        <td class="otp-code">${escapeHtml(otpDisplay)}</td>
+                        <td>${escapeHtml(timeDisplay)}</td>
                         <td><button class="delete-btn" onclick="deleteOTP(${item.id})">Delete</button></td>
                     </tr>
                 `;
             });
             tbody.innerHTML = html;
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return str;
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
         
         function filterTable() {
@@ -259,8 +270,10 @@
             checkboxes.forEach(cb => cb.checked = selectAll.checked);
         }
         
-        // প্রতি 5 সেকেন্ডে রিফ্রেশ
+        // প্রতি 5 সেকেন্ডে自動 রিফ্রেশ
         setInterval(loadOTPs, 5000);
+        
+        // পেজ লোড হলে ডাটা লোড করুন
         loadOTPs();
     </script>
 </body>
