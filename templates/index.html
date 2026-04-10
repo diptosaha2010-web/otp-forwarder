@@ -3,101 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IVAC OTP Dashboard</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>IVAC Premium OTP Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --primary: #1a73e8; --danger: #d93025; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        .header h2 { color: var(--primary); margin: 0; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
 
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .search-box { display: flex; flex: 1; gap: 5px; }
-        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
-        
-        button { cursor: pointer; border: none; border-radius: 6px; padding: 10px 15px; font-weight: 600; transition: 0.3s; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Top Header Area */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-size: 24px;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Control Panel */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            flex: 1;
+            background: #334155;
+            border-radius: 8px;
+            padding: 2px 8px;
+            border: 1px solid transparent;
+            transition: 0.3s;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 10px;
+            width: 100%;
+            outline: none;
+        }
+
+        /* Buttons */
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
         .btn-search { background: var(--primary); color: white; }
-        .btn-delete-all { background: var(--danger); color: white; }
-        .btn-delete-selected { background: #5f6368; color: white; cursor: not-allowed; opacity: 0.6; }
-        .btn-delete-selected.active { background: var(--danger); cursor: pointer; opacity: 1; }
+        .btn-search:hover { background: var(--primary-hover); }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f1f3f4; color: #5f6368; }
-        tr:hover { background: #f8f9fa; }
+        .btn-delete-all { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-delete-all:hover { background: var(--danger); color: white; }
 
-        .otp-badge { background: #e8f0fe; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 1.1em; }
-        .delete-icon { color: #ccc; cursor: not-allowed; transition: 0.3s; }
+        .btn-delete-selected { background: #475569; color: #cbd5e1; opacity: 0.5; cursor: not-allowed; }
+        .btn-delete-selected.active { background: var(--danger); color: white; opacity: 1; cursor: pointer; }
+
+        /* Table Design */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        th { color: var(--text-dim); font-weight: 500; text-align: left; padding: 12px 20px; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
+        
+        tbody tr { background: #2d3748; transition: 0.3s; }
+        tbody tr:hover { transform: scale(1.005); background: #334155; }
+        
+        td { padding: 16px 20px; border: none; }
+        td:first-child { border-radius: 12px 0 0 12px; }
+        td:last-child { border-radius: 0 12px 12px 0; }
+
+        /* Status & Badges */
+        .otp-badge {
+            background: rgba(79, 70, 229, 0.2);
+            color: #a5b4fc;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'Monaco', monospace;
+            font-size: 16px;
+            letter-spacing: 2px;
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+
+        .delete-icon {
+            color: #64748b;
+            cursor: not-allowed;
+            font-size: 18px;
+            transition: 0.2s;
+        }
+
         .delete-icon.active { color: var(--danger); cursor: pointer; }
+        .delete-icon.active:hover { transform: rotate(15deg) scale(1.2); }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 15px; text-align: center; }
+            .controls { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2><i class="fa-solid fa-shield-halved"></i> OTP Monitoring Panel</h2>
-        <button class="btn-delete-all" onclick="deleteAll()"><i class="fa-solid fa-trash-can"></i> All Delete</button>
+        <h2><i class="fa-solid fa-bolt-lightning"></i> IVAC Premium Dashboard</h2>
+        <button class="btn-delete-all" onclick="deleteAll()"><i class="fa-solid fa-fire"></i> Clear All Records</button>
     </div>
 
     <div class="controls">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search by number...">
-            <button class="btn-search" onclick="searchTable()"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+            <i class="fa-solid fa-magnifying-glass" style="margin: auto 10px; color: var(--text-dim);"></i>
+            <input type="text" id="searchInput" placeholder="Search mobile number...">
+            <button class="btn-search" onclick="searchTable()">Search</button>
         </div>
-        <button id="deleteSelectedBtn" class="btn-delete-selected" onclick="deleteSelected()" disabled>Delete Selected</button>
+        <button id="deleteSelectedBtn" class="btn-delete-selected" onclick="deleteSelected()" disabled>
+            <i class="fa-solid fa-trash-can"></i> Delete Selected
+        </button>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
-                <th>SL</th>
-                <th>Mobile Number</th>
-                <th>OTP</th>
-                <th>Time</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="otpTableBody">
-            </tbody>
-    </table>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                    <th>SL</th>
+                    <th>Mobile Number</th>
+                    <th>OTP Code</th>
+                    <th>Arrival Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="otpTableBody">
+                </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     let selectedIds = new Set();
 
     async function fetchOTPs() {
-        const response = await fetch('/api/get_otps');
-        const data = await response.json();
-        const tbody = document.getElementById('otpTableBody');
-        tbody.innerHTML = '';
+        try {
+            const response = await fetch('/api/get_otps');
+            const data = await response.json();
+            const tbody = document.getElementById('otpTableBody');
+            
+            // To prevent flickering on every 4s update, you could check if data changed
+            tbody.innerHTML = '';
 
-        data.forEach((item, index) => {
-            const isChecked = selectedIds.has(item.id);
-            const row = `
-                <tr>
-                    <td><input type="checkbox" class="row-checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="handleRowCheck(this, ${item.id})"></td>
-                    <td>${index + 1}</td>
-                    <td>${item.target}</td>
-                    <td><span class="otp-badge">${item.message}</span></td>
-                    <td>${item.timestamp}</td>
-                    <td><i class="fa-solid fa-trash delete-icon ${isChecked ? 'active' : ''}" onclick="${isChecked ? `deleteSingle(${item.id})` : ''}"></i></td>
-                </tr>
-            `;
-            tbody.innerHTML += row;
-        });
+            data.forEach((item, index) => {
+                const isChecked = selectedIds.has(item.id);
+                const row = `
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" value="${item.id}" ${isChecked ? 'checked' : ''} onchange="handleRowCheck(this, ${item.id})"></td>
+                        <td style="color: var(--text-dim)">#${index + 1}</td>
+                        <td style="font-weight: 500">${item.target}</td>
+                        <td><span class="otp-badge">${item.message}</span></td>
+                        <td style="color: var(--text-dim); font-size: 14px;">${item.timestamp}</td>
+                        <td>
+                            <i class="fa-solid fa-trash-can delete-icon ${isChecked ? 'active' : ''}" 
+                               onclick="${isChecked ? `deleteSingle(${item.id})` : ''}"></i>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } catch (e) { console.log("Fetch error", e); }
     }
 
     function handleRowCheck(checkbox, id) {
-        if (checkbox.checked) {
-            selectedIds.add(id);
-        } else {
-            selectedIds.delete(id);
-        }
+        if (checkbox.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
         updateControlButtons();
-        fetchOTPs(); // Refresh to update delete icons
+        fetchOTPs(); 
     }
 
     function toggleSelectAll() {
@@ -114,17 +255,13 @@
 
     function updateControlButtons() {
         const btn = document.getElementById('deleteSelectedBtn');
-        if (selectedIds.size > 0) {
-            btn.classList.add('active');
-            btn.disabled = false;
-        } else {
-            btn.classList.remove('active');
-            btn.disabled = true;
-        }
+        const isActive = selectedIds.size > 0;
+        btn.disabled = !isActive;
+        btn.classList.toggle('active', isActive);
     }
 
     async function deleteSingle(id) {
-        if(confirm('Are you sure?')) {
+        if(confirm('Permanently delete this OTP?')) {
             await fetch(`/api/delete/${id}`, { method: 'DELETE' });
             selectedIds.delete(id);
             fetchOTPs();
@@ -133,7 +270,8 @@
 
     async function deleteSelected() {
         if(confirm(`Delete ${selectedIds.size} selected items?`)) {
-            for (let id of selectedIds) {
+            const idsToDelete = Array.from(selectedIds);
+            for (let id of idsToDelete) {
                 await fetch(`/api/delete/${id}`, { method: 'DELETE' });
             }
             selectedIds.clear();
@@ -143,7 +281,7 @@
     }
 
     async function deleteAll() {
-        if(confirm('Delete all OTP records? This cannot be undone.')) {
+        if(confirm('WARNING: This will wipe out all OTP data. Continue?')) {
             await fetch('/api/delete_all', { method: 'DELETE' });
             selectedIds.clear();
             updateControlButtons();
@@ -155,15 +293,16 @@
         let input = document.getElementById("searchInput").value.toUpperCase();
         let tr = document.getElementById("otpTableBody").getElementsByTagName("tr");
         for (let i = 0; i < tr.length; i++) {
-            let td = tr[i].getElementsByTagName("td")[2]; // Mobile Number column
+            let td = tr[i].getElementsByTagName("td")[2]; 
             if (td) {
                 let txtValue = td.textContent || td.innerText;
-                tr[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+                tr[i].style.display = txtValue.toUpperCase().includes(input) ? "" : "none";
             }
         }
     }
 
-    setInterval(fetchOTPs, 3000);
+    // Interval slightly increased to 4s for smoother performance
+    setInterval(fetchOTPs, 4000);
     fetchOTPs();
 </script>
 
